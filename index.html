@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp URL Generator for CSV</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Add favicon to fix the 404 error -->
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #075e54;
+            text-align: center;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #128C7E;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #075e54;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e7f3ef;
+            border-radius: 4px;
+            display: none;
+        }
+        .instructions {
+            background-color: #e7f3ef;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+        }
+        .tab.active {
+            background-color: #128C7E;
+            color: white;
+            border-color: #128C7E;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        /* Styles for download button */
+        .download-btn {
+            background-color: #25D366;  /* WhatsApp green */
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+
+        .download-btn:hover {
+            background-color: #128C7E;  /* Darker WhatsApp green */
+        }
+
+        .download-note {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* New styles for send message button */
+        .send-btn {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        .send-btn:hover {
+            background-color: #128C7E;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        table th {
+            background-color: #f0f0f0;
+        }
+        
+        .url-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .status-cell {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .status-sent {
+            color: #25D366;
+            background-color: #f0fff0;
+        }
+        
+        /* Add progress and summary section styles */
+        .progress-summary {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 20px;
+            margin-top: 10px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #25D366;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp URL Generator for CSV</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('csv-tab')">CSV Processor</div>
+        <div class="tab" onclick="showTab('google-tab')">Google Sheets</div>
+        <div class="tab" onclick="showTab('auto-send-tab')">Auto Send</div>
+    </div>
+    
+    <div id="csv-tab" class="tab-content active">
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <p>This tool adds a new column with WhatsApp URL links to your CSV file. It combines phone numbers from the last column with your custom message.</p>
+            <p><strong>New Feature:</strong> Leading zeros from phone numbers are now removed automatically!</p>
+            <ol>
+                <li>Select your CSV file (.csv)</li>
+                <li>Enter a custom message (optional)</li>
+                <li>Click "Process File" to generate a new CSV file with WhatsApp URLs and Send buttons</li>
+            </ol>
+        </div>
+        
+        <div class="container">
+            <div class="form-group">
+                <label for="csvFile">Select CSV File:</label>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+            
+            <div class="form-group">
+                <label for="customMessage">Custom Message:</label>
+                <textarea id="customMessage" placeholder="Enter your message here. Example: Hello! I'm reaching out about..."></textarea>
+            </div>
+            
+            <button onclick="processFile()">Process File</button>
+            
+            <div id="result" class="result"></div>
+        </div>
+    </div>
+    
+    <div id="google-tab" class="tab-content">
+        <div class="instructions">
+            <h3>Instructions for Google Sheets:</h3>
+            <p>To add WhatsApp URLs to a Google Sheet, follow these steps:</p>
+            <ol>
+                <li>Open your Google Sheet</li>
+                <li>Go to <strong>Extensions > Apps Script</strong></li>
+                <li>Copy and paste the following code</li>
+                <li>Save the script and reload your sheet</li>
+                <li>You'll see a new menu item "WhatsApp Tools"</li>
+                <li>Click "WhatsApp Tools > Add WhatsApp URLs" to run the script</li>
+            </ol>
+        </div>
+        
+        <div class="container">
+            <div class="form-group">
+                <label for="googleScriptCode">Google Apps Script Code (Updated to Remove Leading Zeros):</label>
+                <textarea id="googleScriptCode" readonly style="height: 200px; font-family: monospace; font-size: 12px;">// WhatsApp URL Creator for Google Sheets
+function addWhatsAppUrlToGoogleSheet(customMessage = "Hello!") {
+  // Get active spreadsheet and sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  
+  // Get data range
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    SpreadsheetApp.getUi().alert("No data found in the sheet!");
+    return;
+  }
+  
+  // Find the last column (assumed to be phone numbers)
+  const headers = values[0];
+  const phoneColumnIndex = headers.length - 1;
+  
+  // Add new header for WhatsApp URL
+  const whatsAppHeader = "WhatsApp URL";
+  sheet.getRange(1, headers.length + 1).setValue(whatsAppHeader);
+  
+  // Encode the custom message for URL
+  const encodedMessage = encodeURIComponent(customMessage);
+  
+  // Track how many rows were processed and skipped
+  let processedCount = 0;
+  let skippedCount = 0;
+  
+  // Process each row starting from row 2 (after header)
+  for (let i = 1; i < values.length; i++) {
+    // Get phone number and clean it
+    let phoneNumber = values[i][phoneColumnIndex].toString().trim();
+    
+    // Skip row if phone number is empty
+    if (!phoneNumber) {
+      skippedCount++;
+      continue;
+    }
+    
+    // Remove non-numeric characters except plus sign
+    phoneNumber = phoneNumber.replace(/[^0-9+]/g, '');
+    
+    // Remove leading zero if present and not after a plus sign
+    if (phoneNumber.startsWith('0') && !phoneNumber.startsWith('+')) {
+      phoneNumber = phoneNumber.substring(1);
+    }
+    
+    // Skip row if phone number is empty after cleaning
+    if (phoneNumber === '') {
+      skippedCount++;
+      continue;
+    }
+    
+    // Create WhatsApp URL
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodedMessage}`;
+    
+    // Add URL to the next column
+    sheet.getRange(i + 1, headers.length + 1).setValue(whatsappUrl);
+    processedCount++;
+  }
+  
+  SpreadsheetApp.getUi().alert(`Added WhatsApp URLs to ${processedCount} rows, skipped ${skippedCount} rows with custom message: "${customMessage}"`);
+}
+
+// Create menu item
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('WhatsApp Tools')
+    .addItem('Add WhatsApp URLs', 'showMessagePrompt')
+    .addToUi();
+}
+
+function showMessagePrompt() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt(
+    'Custom WhatsApp Message',
+    'Enter the message you want to include in WhatsApp URLs:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const message = response.getResponseText();
+    addWhatsAppUrlToGoogleSheet(message);
+  }
+}</textarea>
+            </div>
+            <button onclick="copyGoogleCode()">Copy Code</button>
+        </div>
+    </div>
+    
+    <div id="auto-send-tab" class="tab-content">
+        <div class="instructions">
+            <h3>Auto-Send WhatsApp Messages</h3>
+            <p>There are a few ways to automatically send WhatsApp messages from your generated URLs:</p>
+            
+            <h4>Option 1: Browser Extension</h4>
+            <p>You can use a browser extension that can open multiple URLs sequentially:</p>
+            <ol>
+                <li>Install "Bulk URL Opener" or similar extension for Chrome/Firefox</li>
+                <li>Export your WhatsApp URLs to a text file (one URL per line)</li>
+                <li>Use the extension to open URLs with delay between each one</li>
+                <li>For each URL that opens, you'll need to click "Send" in WhatsApp Web</li>
+            </ol>
+            
+            <h4>Option 2: Automated Script (Semi-Automatic)</h4>
+            <p>This code demonstrates how to open URLs sequentially with a delay:</p>
+        </div>
+        
+        <div class="container">
+            <div class="form-group">
+                <label for="urlList">List of WhatsApp URLs (one per line):</label>
+                <textarea id="urlList" placeholder="https://api.whatsapp.com/send?phone=1234567890&text=Hello
+https://api.whatsapp.com/send?phone=9876543210&text=Hello" style="height: 150px;"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="sendDelay">Delay between messages (seconds):</label>
+                <input type="number" id="sendDelay" value="15" min="5" max="60">
+            </div>
+            
+            <button onclick="startAutoSend()">Start Auto-Send</button>
+            <button onclick="stopAutoSend()" style="background-color: #c23616;">Stop</button>
+            
+            <div id="autoSendStatus" class="result" style="margin-top: 15px;"></div>
+            
+            <div class="instructions" style="margin-top: 20px;">
+                <h4>Important Notes:</h4>
+                <ul>
+                    <li>This method requires you to be logged into WhatsApp Web</li>
+                    <li>You'll still need to manually click "Send" for each message</li>
+                    <li>Set a reasonable delay to avoid being blocked (15+ seconds recommended)</li>
+                    <li>For fully automated sending, you would need professional WhatsApp Business API</li>
+                </ul>
+                
+                <h4>WhatsApp Business API (For Enterprise Use):</h4>
+                <p>For true automation without manual clicks, you'll need the official WhatsApp Business API. This requires:</p>
+                <ul>
+                    <li>Business verification with WhatsApp/Meta</li>
+                    <li>Approved business account</li>
+                    <li>Integration with a WhatsApp Business Solution Provider</li>
+                    <li>Compliance with WhatsApp's policies</li>
+                </ul>
+                <p>Visit <a href="https://business.whatsapp.com/" target="_blank">WhatsApp Business</a> for more information.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for auto-send functionality
+        let urlsToSend = [];
+        let currentUrlIndex = 0;
+        let sendInterval = null;
+        let isAutoSending = false;
+        
+        // Function to process CSV file - IMPROVED VERSION with leading zero removal and Send buttons
+        function processFile() {
+            const fileInput = document.getElementById('csvFile');
+            const customMessage = document.getElementById('customMessage').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultDiv.innerHTML = "<p>Please select a CSV file first!</p>";
+                resultDiv.style.display = "block";
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            resultDiv.innerHTML = "<p>Processing file... Please wait.</p>";
+            resultDiv.style.display = "block";
+            
+            // Parse CSV file using PapaParse
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        resultDiv.innerHTML = `<p>❌ Error parsing CSV: ${results.errors[0].message}</p>`;
+                        return;
+                    }
+                    
+                    // Get the original data
+                    let data = results.data;
+                    
+                    if (data.length === 0) {
+                        resultDiv.innerHTML = "<p>No data found in the CSV file!</p>";
+                        return;
+                    }
+                    
+                    // Get headers
+                    const headers = results.meta.fields;
+                    if (headers.length === 0) {
+                        resultDiv.innerHTML = "<p>No headers found in the CSV file!</p>";
+                        return;
+                    }
+                    
+                    // Get phone number column (last column)
+                    const phoneColumnName = headers[headers.length - 1];
+                    
+                    // Add WhatsApp URL column
+                    const whatsappColumnName = "WhatsApp URL";
+                    const encodedMessage = encodeURIComponent(customMessage || "Hello!");
+                    
+                    // Process each row and filter out rows without phone numbers
+                    const processedData = data.filter(row => {
+                        if (!row[phoneColumnName] || row[phoneColumnName].toString().trim() === '') {
+                            return false; // Skip rows without phone numbers
+                        }
+                        
+                        let phoneNumber = row[phoneColumnName].toString().trim();
+                        
+                        // Remove any spaces, dashes, or other formatting
+                        phoneNumber = phoneNumber.replace(/[^0-9+]/g, '');
+                        
+                        // Remove leading zero(s) if they exist and not after a plus sign
+                        if (!phoneNumber.startsWith('+')) {
+                            // Remove all leading zeros
+                            phoneNumber = phoneNumber.replace(/^0+/, '');
+                        }
+                        
+                        if (phoneNumber === '') {
+                            return false; // Skip if phone number is empty after cleaning
+                        }
+                        
+                        // Create WhatsApp URL
+                        row[whatsappColumnName] = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodedMessage}`;
+                        
+                        // Add a unique ID for tracking status
+                        row['_rowId'] = 'row_' + phoneNumber + '_' + Math.random().toString(36).substring(2, 10);
+                        
+                        return true;
+                    });
+                    
+                    // Use the processed data instead of reassigning to data
+                    const newData = processedData;
+                    
+                    // Generate CSV content
+                    const newHeaders = [...headers, whatsappColumnName];
+                    const csvContent = Papa.unparse({
+                        fields: newHeaders,
+                        data: newData
+                    });
+                    
+                    // Create download link
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Store file name for the download button
+                    const downloadFileName = "WhatsApp_URLs_" + file.name;
+                    
+                    // Auto-download (will happen in background)
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = downloadFileName;
+                    a.click();
+                    
+                    // Generate table with send buttons and status
+                    let tableHtml = `
+                        <h3>Results with Send Message Buttons</h3>
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>${phoneColumnName}</th>
+                                    <th>WhatsApp URL</th>
+                                    <th>Action</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    newData.forEach((row, index) => {
+                        const url = row[whatsappColumnName];
+                        const rowId = row['_rowId'];
+                        
+                        // Check if we already have status for this row in localStorage
+                        const savedStatus = localStorage.getItem(rowId) || '';
+                        const statusClass = savedStatus === 'Sent' ? 'status-sent' : '';
+                        
+                        tableHtml += `
+                            <tr id="${rowId}">
+                                <td>${index + 1}</td>
+                                <td>${row[phoneColumnName]}</td>
+                                <td class="url-cell">${url}</td>
+                                <td><button class="send-btn" onclick="sendMessage('${url}', '${rowId}')">Send Message</button></td>
+                                <td class="status-cell ${statusClass}">${savedStatus}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    // Show success message and create a manual download button
+                    resultDiv.innerHTML = `
+                        <p>✅ Success! Added WhatsApp URLs to ${newData.length} rows.</p>
+                        <p><strong>Custom message:</strong> "${customMessage || "Hello!"}"</p>
+                        <p><strong>Leading zeros removed from phone numbers!</strong></p>
+                        <p>
+                            <button id="manual-download" class="download-btn">
+                                📥 Download CSV with WhatsApp URLs
+                            </button>
+                            <span class="download-note">File has also been auto-downloaded</span>
+                        </p>
+                        
+                        <div class="progress-summary">
+                            <div>
+                                <span id="sentCount">0</span> of <span id="totalCount">${newData.length}</span> messages sent
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <button id="resetStatus" class="send-btn" style="background-color: #f39c12;">Reset Status</button>
+                                <button id="markAllSent" class="send-btn">Mark All Sent</button>
+                            </div>
+                        </div>
+                        
+                        ${tableHtml}
+                    `;
+                    
+                    // Add event listeners for new buttons
+                    document.getElementById('resetStatus').addEventListener('click', resetAllStatus);
+                    document.getElementById('markAllSent').addEventListener('click', markAllAsSent);
+                    
+                    // Update progress based on stored status
+                    updateProgressSummary();
+                    
+                    // Add click handler to the manual download button
+                    document.getElementById('manual-download').addEventListener('click', function() {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = url;
+                        downloadLink.download = downloadFileName;
+                        downloadLink.click();
+                    });
+                    
+                    // Clean up the URL object after 5 minutes to prevent memory leaks
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 300000); // 5 minutes in milliseconds
+                }
+            });
+        }
+        
+        // Function to copy Google Apps Script code
+        function copyGoogleCode() {
+            const codeArea = document.getElementById('googleScriptCode');
+            codeArea.select();
+            document.execCommand('copy');
+            alert('Code copied to clipboard! Paste it in Google Apps Script editor.');
+        }
+        
+        // Function to switch tabs
+        function showTab(tabId) {
+            // Hide all tab contents
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Deactivate all tabs
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Activate selected tab
+            const selectedTab = document.querySelector(`.tab[onclick="showTab('${tabId}')"]`);
+            selectedTab.classList.add('active');
+        }
+        
+        // Function to start auto-sending WhatsApp messages
+        function startAutoSend() {
+            if (isAutoSending) {
+                alert("Auto-send is already running!");
+                return;
+            }
+            
+            const urlListText = document.getElementById('urlList').value.trim();
+            if (!urlListText) {
+                alert("Please enter WhatsApp URLs to send!");
+                return;
+            }
+            
+            urlsToSend = urlListText.split('\n').filter(url => url.trim() !== '');
+            if (urlsToSend.length === 0) {
+                alert("No valid URLs found!");
+                return;
+            }
+            
+            const delay = parseInt(document.getElementById('sendDelay').value, 10) || 15;
+            if (delay < 5) {
+                alert("Please set a delay of at least 5 seconds to avoid being blocked!");
+                return;
+            }
+            
+            const statusDiv = document.getElementById('autoSendStatus');
+            statusDiv.style.display = 'block';
+            
+            // Confirm with user
+            if (!confirm(`Ready to start sending ${urlsToSend.length} messages with a ${delay} second delay between each?\n\nMake sure you're logged into WhatsApp Web in another tab!`)) {
+                return;
+            }
+            
+            currentUrlIndex = 0;
+            isAutoSending = true;
+            
+            // Update status
+            statusDiv.innerHTML = `<p>Auto-send started. Sending message 1 of ${urlsToSend.length}...</p>`;
+            
+            // Open first URL
+            window.open(urlsToSend[currentUrlIndex], '_blank');
+            currentUrlIndex++;
+            
+            // Set interval for remaining URLs
+            sendInterval = setInterval(() => {
+                if (currentUrlIndex >= urlsToSend.length) {
+                    // All URLs sent
+                    clearInterval(sendInterval);
+                    isAutoSending = false;
+                    statusDiv.innerHTML = `<p>✅ Completed! All ${urlsToSend.length} messages have been processed.</p>`;
+                    return;
+                }
+                
+                // Update status
+                statusDiv.innerHTML = `<p>Sending message ${currentUrlIndex + 1} of ${urlsToSend.length}...</p>`;
+                
+                // Open next URL
+                window.open(urlsToSend[currentUrlIndex], '_blank');
+                currentUrlIndex++;
+            }, delay * 1000);
+        }
+        
+        // Function to stop auto-sending
+        function stopAutoSend() {
+            if (!isAutoSending) {
+                alert("Auto-send is not running!");
+                return;
+            }
+            
+            clearInterval(sendInterval);
+            isAutoSending = false;
+            
+            const statusDiv = document.getElementById('autoSendStatus');
+            statusDiv.innerHTML = `<p>⚠️ Stopped! Processed ${currentUrlIndex} of ${urlsToSend.length} messages.</p>`;
+        }
+        
+        // Function to send message and update status
+        function sendMessage(url, rowId) {
+            // Open WhatsApp URL in new tab
+            window.open(url, '_blank');
+            
+            // Update status in table
+            const statusCell = document.querySelector(`#${rowId} .status-cell`);
+            statusCell.textContent = 'Sent';
+            statusCell.classList.add('status-sent');
+            
+            // Store status in localStorage
+            localStorage.setItem(rowId, 'Sent');
+            
+            // Update progress summary
+            updateProgressSummary();
+        }
+        
+        // Function to update progress summary
+        function updateProgressSummary() {
+            const table = document.getElementById('resultsTable');
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            const totalCount = rows.length;
+            let sentCount = 0;
+            
+            rows.forEach(row => {
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell && statusCell.textContent === 'Sent') {
+                    sentCount++;
+                }
+            });
+            
+            // Update count display
+            const sentCountElement = document.getElementById('sentCount');
+            const totalCountElement = document.getElementById('totalCount');
+            
+            if (sentCountElement && totalCountElement) {
+                sentCountElement.textContent = sentCount;
+                totalCountElement.textContent = totalCount;
+                
+                // Update progress bar
+                const progressBar = document.getElementById('progressBar');
+                if (progressBar && totalCount > 0) {
+                    const percentage = (sentCount / totalCount) * 100;
+                    progressBar.style.width = percentage + '%';
+                }
+            }
+        }
+        
+        // Function to reset all status
+        function resetAllStatus() {
+            if (!confirm('Are you sure you want to reset all message status?')) {
+                return;
+            }
+            
+            const table = document.getElementById('resultsTable');
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const rowId = row.id;
+                const statusCell = row.querySelector('.status-cell');
+                
+                if (statusCell) {
+                    statusCell.textContent = '';
+                    statusCell.classList.remove('status-sent');
+                    localStorage.removeItem(rowId);
+                }
+            });
+            
+            // Update progress summary
+            updateProgressSummary();
+        }
+        
+        // Function to mark all as sent
+        function markAllAsSent() {
+            if (!confirm('Are you sure you want to mark all messages as sent?')) {
+                return;
+            }
+            
+            const table = document.getElementById('resultsTable');
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const rowId = row.id;
+                const statusCell = row.querySelector('.status-cell');
+                
+                if (statusCell) {
+                    statusCell.textContent = 'Sent';
+                    statusCell.classList.add('status-sent');
+                    localStorage.setItem(rowId, 'Sent');
+                }
+            });
+            
+            // Update progress summary
+            updateProgressSummary();
+        }
+    </script>
+</body>
+</html>
