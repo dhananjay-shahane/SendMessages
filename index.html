@@ -198,11 +198,13 @@ function showMessagePrompt() {
     <script>
         // Global variables
         let isMessageLocked = false;
-        const savedMessage = localStorage.getItem('customMessage');
-
+        const storageKey = 'whatsapp_custom_message';
+        const lockStatusKey = 'whatsapp_message_locked';
+        
         // Initialize on document load
         document.addEventListener('DOMContentLoaded', function () {
             // Restore custom message from localStorage if available
+            const savedMessage = localStorage.getItem(storageKey);
             if (savedMessage) {
                 document.getElementById('customMessage').value = savedMessage;
             }
@@ -212,11 +214,19 @@ function showMessagePrompt() {
             toggleLockBtn.addEventListener('click', toggleMessageLock);
 
             // Check if message lock status is stored
-            if (localStorage.getItem('isMessageLocked') === 'true') {
+            if (localStorage.getItem(lockStatusKey) === 'true') {
                 isMessageLocked = true;
                 document.getElementById('lockIcon').className = 'fas fa-lock';
                 document.getElementById('customMessage').readOnly = true;
             }
+            
+            // Add event listener for textarea changes
+            document.getElementById('customMessage').addEventListener('input', function() {
+                if (!isMessageLocked) {
+                    // Only auto-save when typing if not locked
+                    localStorage.setItem(storageKey, this.value);
+                }
+            });
         });
 
         // Toggle custom message lock
@@ -230,13 +240,13 @@ function showMessagePrompt() {
                 customMessage.readOnly = true;
 
                 // Save message to localStorage when locking
-                localStorage.setItem('customMessage', customMessage.value);
+                localStorage.setItem(storageKey, customMessage.value);
             } else {
                 lockIcon.className = 'fas fa-lock-open';
                 customMessage.readOnly = false;
             }
 
-            localStorage.setItem('isMessageLocked', isMessageLocked);
+            localStorage.setItem(lockStatusKey, isMessageLocked);
         }
 
         // Function to switch tabs
@@ -274,7 +284,17 @@ function showMessagePrompt() {
             const codeArea = document.getElementById('googleScriptCode');
             codeArea.select();
             document.execCommand('copy');
-            alert('Code copied to clipboard! Paste it in Google Apps Script editor.');
+            
+            // Create a temporary alert element instead of using alert()
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'fixed top-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md';
+            alertDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Code copied to clipboard! Paste it in Google Apps Script editor.';
+            document.body.appendChild(alertDiv);
+            
+            // Remove the alert after 3 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
         }
 
         // Function to process CSV file - IMPROVED VERSION with no auto-download
@@ -284,8 +304,8 @@ function showMessagePrompt() {
             const resultDiv = document.getElementById('result');
             const processButton = document.getElementById('processButton');
 
-            // Save message to localStorage regardless of lock status
-            localStorage.setItem('customMessage', customMessage);
+            // Save message to localStorage
+            localStorage.setItem(storageKey, customMessage);
 
             if (!fileInput.files || fileInput.files.length === 0) {
                 showResult("<p class='text-red-600'><i class='fas fa-exclamation-circle mr-2'></i>Please select a CSV file first!</p>");
