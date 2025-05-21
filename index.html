@@ -227,6 +227,19 @@ function showMessagePrompt() {
                     localStorage.setItem(storageKey, this.value);
                 }
             });
+            
+            // Add event delegation for send buttons
+            document.body.addEventListener('click', function(e) {
+                // Check if the clicked element is a send button or its parent
+                const sendButton = e.target.closest('.send-button');
+                if (sendButton) {
+                    const url = sendButton.getAttribute('data-url');
+                    const rowId = sendButton.getAttribute('data-row-id');
+                    if (url && rowId) {
+                        sendMessage(url, rowId);
+                    }
+                }
+            });
         });
 
         // Toggle custom message lock
@@ -387,8 +400,9 @@ function showMessagePrompt() {
                         // Create WhatsApp URL
                         row[whatsappColumnName] = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodedMessage}`;
 
-                        // Add a unique ID for tracking status
-                        row['_rowId'] = 'row_' + phoneNumber + '_' + Math.random().toString(36).substring(2, 10);
+                        // Generate a safe ID by replacing special characters
+                        const safeId = 'row_' + phoneNumber.replace(/[+]/g, '_plus_') + '_' + Math.random().toString(36).substring(2, 10);
+                        row['_rowId'] = safeId;
 
                         return true;
                     });
@@ -434,15 +448,15 @@ function showMessagePrompt() {
                         // Check if we already have status for this row in localStorage
                         const savedStatus = localStorage.getItem(rowId) || '';
                         const statusClass = savedStatus === 'Sent' ? 'bg-green-50 text-green-600' : '';
-
+                        
                         tableHtml += `
                             <tr id="${rowId}" class="hover:bg-gray-50">
                                 <td class="px-3 py-2 border border-gray-200">${index + 1}</td>
                                 <td class="px-3 py-2 border border-gray-200">${row[phoneColumnName]}</td>
                                 <td class="px-3 py-2 border border-gray-200 truncate hidden md:table-cell" title="${url}">${url}</td>
                                 <td class="px-3 py-2 border border-gray-200 text-center">
-                                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition duration-200" 
-                                            onclick="sendMessage('${url}', '${rowId}')"> Send
+                                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition duration-200 send-button" 
+                                            data-url="${url}" data-row-id="${rowId}">Send
                                     </button>
                                 </td>
                                 <td class="px-3 py-2 border border-gray-200 text-center font-medium ${statusClass} status-cell">${savedStatus}</td>
@@ -530,16 +544,21 @@ function showMessagePrompt() {
             // Open WhatsApp URL in new tab
             window.open(url, '_blank');
 
-            // Update status in table
-            const statusCell = document.querySelector(`#${rowId} .status-cell`);
-            statusCell.textContent = 'Sent';
-            statusCell.classList.add('bg-green-50', 'text-green-600');
-
-            // Store status in localStorage
-            localStorage.setItem(rowId, 'Sent');
-
-            // Update progress summary
-            updateProgressSummary();
+            // Find the status cell using the appropriate selector
+            const row = document.getElementById(rowId);
+            if (row) {
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell) {
+                    statusCell.textContent = 'Sent';
+                    statusCell.classList.add('bg-green-50', 'text-green-600');
+                    
+                    // Store status in localStorage
+                    localStorage.setItem(rowId, 'Sent');
+                    
+                    // Update progress summary
+                    updateProgressSummary();
+                }
+            }
         }
 
         // Function to update progress summary
